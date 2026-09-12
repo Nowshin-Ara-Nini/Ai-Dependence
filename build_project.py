@@ -58,9 +58,9 @@ markdown('''
 # Phases 2–20 — Exploratory analysis and explainable regression
 
 The following sections complete the requested study. The original request has
-no Phases 17 or 18. Optional classification and a prediction dashboard are
-omitted: no validated dependency cutoffs are available, and weak reliability
-does not support individual decision tools.
+no Phases 17 or 18. Optional classification is omitted because there are no
+validated dependency cutoffs. A separate Streamlit questionnaire demo uses the
+saved regression pipeline and clearly labels every output as exploratory.
 
 **Analysis policy, established before modeling:** the origin of repeated records
 is unknown. Use one copy of each exact 30-column response pattern for the primary
@@ -1621,7 +1621,7 @@ group, regression, error, explanation, and clustering visuals.
 and verify meaningful invariants: encoded values, exact target construction,
 train/test separation, saved-model prediction parity, and presence of the
 requested artifacts. No individual is labeled cognitively impaired or diagnosed.
-The Streamlit dashboard is a local portfolio viewer. Its exploratory estimate is
+The Streamlit app is a local questionnaire demo. Its exploratory estimate is
 clearly separated from the research findings and is not a validated assessment.
 ''')
 code('''
@@ -1645,9 +1645,11 @@ expected_assets = [DATA / "cleaned_survey_all_rows.csv", DATA / "composite_indic
                    TABLES / "training_only_hyperparameter_search.csv", TABLES / "alternative_clustering_comparison.csv",
                    MODELS / "best_regression_pipeline.joblib", Path("FINAL_REPORT.md"), Path("FINAL_REPORT.html")]
 assert all(path.is_file() and path.stat().st_size > 0 for path in expected_assets)
-requirements = ("# Versions used for the executed notebook (Python 3.12).\\n"
+requirements = ("# Versions used for the executed notebook and Streamlit Community Cloud.\\n"
+                "# Choose Python 3.11 in Streamlit Community Cloud advanced settings because\\n"
+                "# the saved scikit-learn 1.2.2 pipeline must use the same library version.\\n"
                 + "\\n".join(f"{name}=={version}" for name, version in versions.items())
-                + "\\n# Local portfolio dashboard.\\nstreamlit>=1.30,<2.0\\n")
+                + "\\nstreamlit>=1.30,<2.0\\n")
 Path("requirements.txt").write_text(requirements, encoding="utf-8")
 optional_requirements = "# Optional SHAP; the project falls back to permutation importance.\\n"
 try:
@@ -1700,9 +1702,9 @@ and the already-executed permutation analysis is used. XGBoost is not required.
 The core notebook also runs sequentially in an IDE with the installed Python kernel.
 For a browser notebook interface, install JupyterLab separately if desired.
 
-## Local Streamlit dashboard
+## Interactive Streamlit prediction demo
 
-After running all notebook cells, start the dashboard with:
+After running all notebook cells, start the questionnaire demo with:
 
 ```powershell
 python -m pip install -r requirements.txt
@@ -1710,12 +1712,13 @@ python -m streamlit run app.py
 ```
 
 Use the `python -m streamlit` form because it works even when Streamlit's Scripts
-folder is not on PowerShell's PATH. The dashboard does not save form entries and
-labels any estimate as exploratory rather than diagnostic.
+folder is not on PowerShell's PATH. A visitor selects demographic details and
+answers 20 self-report questions. On submission, the saved model returns an
+estimated AI Dependency Index. The app does not save form entries.
 
-When the form is submitted, it displays: “Based on your responses, the model
-estimates an AI Dependency Index of 3.8/5.” The value will vary with the entered
-responses and is an exploratory model output, not a psychological assessment.
+For example, it may display: "Based on your responses, the model estimates an AI
+Dependency Index of 3.8/5." The value varies with the selected responses and is
+an exploratory model output, not a psychological assessment.
 
 ### Held-out model validation plot
 
@@ -1785,7 +1788,7 @@ files you trust. Do not use this exploratory model to rank, diagnose or make
 decisions about individual students.
 
 Classification is intentionally omitted because there are no validated severity
-cutoffs. `app.py` provides a local Streamlit dashboard; the HTML report remains
+cutoffs. `app.py` provides a deployable Streamlit prediction demo; the HTML report remains
 available as a static results gallery.
 """
 Path("README.md").write_text(readme, encoding="utf-8")
@@ -1796,7 +1799,7 @@ verification = {"encoded_columns": 25, "primary_rows": len(analysis_df),
     "classification_performed": classification_performed}
 (OUT / "verification.json").write_text(json.dumps(verification, indent=2), encoding="utf-8")
 print(json.dumps(verification, indent=2))
-print("Completed required phases. Optional classification/dashboard omitted with reasons documented.")
+print("Completed required phases. Classification is omitted; the separate Streamlit demo is documented.")
 ''')
 markdown('''
 **Final interpretation:** this project demonstrates a reproducible workflow with

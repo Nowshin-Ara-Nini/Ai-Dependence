@@ -1,7 +1,7 @@
-"""Local Streamlit dashboard for the exploratory AI-dependency portfolio study.
+"""Streamlit demo for the exploratory AI Dependency Index prediction model.
 
-Run from the project root with: python -m streamlit run app.py
-It reads aggregate results and the saved pipeline, and does not save form inputs.
+Run from the project folder with: python -m streamlit run app.py
+The application does not store questionnaire responses.
 """
 from __future__ import annotations
 
@@ -14,10 +14,18 @@ import streamlit as st
 
 
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "outputs"
-TABLES = OUT / "tables"
-FIGURES = OUT / "figures"
-MODELS = OUT / "models"
+MODELS = ROOT / "outputs" / "models"
+RESULTS = ROOT / "outputs" / "results_summary.json"
+MODEL_PATH = MODELS / "best_regression_pipeline.joblib"
+METADATA_PATH = MODELS / "model_metadata.json"
+
+RESPONSE_OPTIONS = {
+    "Strongly Disagree": 1,
+    "Disagree": 2,
+    "Neutral": 3,
+    "Agree": 4,
+    "Strongly Agree": 5,
+}
 
 USAGE_ITEMS = [
     "I use generative AI tools regularly for academic purposes.",
@@ -47,182 +55,206 @@ DECISION_ITEMS = [
     "I use AI recommendations to improve academic performance.",
     "AI tools positively affect my academic decision-making process.",
 ]
+
+# These are the observed categories in the source survey data.
 DEPARTMENTS = [
-    "CSE", "EEE", "Economics", "Pharmacy", "Law", "Architecture", "Mathematics", "English",
-    "Civil Engineering", "BBA", "Software Engineering", "Journalism and Media Studies", "Physics",
-    "Sociology", "Mass Communication", "Accounting", "Chemical Engineering", "Chemistry",
-    "Computer Science and Engineering", "Development Studies", "Electrical and Electronic Engineering",
-    "Environmental Science", "Finance", "Human Resource Management", "Industrial and Production Engineering",
-    "Information Technology", "International Business", "Management", "Marketing", "Mechanical Engineering",
-    "Political Science", "Psychology", "Public Administration", "Statistics", "Textile Engineering",
+    "Accounting", "Architecture", "BBA", "CSE", "Chemical Engineering", "Chemistry",
+    "Civil Engineering", "Computer Science and Engineering", "Development Studies", "EEE",
+    "Economics", "Electrical and Electronic Engineering", "English", "Environmental Science",
+    "Finance", "Human Resource Management", "Industrial and Production Engineering",
+    "Information Technology", "International Business", "Journalism and Media Studies", "Law",
+    "Management", "Marketing", "Mass Communication", "Mathematics", "Mechanical Engineering",
+    "Pharmacy", "Physics", "Political Science", "Psychology", "Public Administration", "Sociology",
+    "Software Engineering", "Statistics", "Textile Engineering",
 ]
 
 
-def survey_columns(prefix: str, statements: list[str]) -> list[str]:
-    return [f"{prefix} [{statement}]" for statement in statements]
-
-
-def label(statement: str) -> str:
-    return statement.removeprefix("I ").rstrip(".")
-
-
-def available(path: Path) -> bool:
-    return path.is_file() and path.stat().st_size > 0
-
-
-@st.cache_data
-def load_json(path: str) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
-
-
-@st.cache_data
-def load_table(filename: str) -> pd.DataFrame:
-    return pd.read_csv(TABLES / filename)
+def survey_columns(prefix: str, items: list[str]) -> list[str]:
+    """Return source-data column names for a block of survey statements."""
+    return [f"{prefix} [{item}]" for item in items]
 
 
 @st.cache_resource
 def load_model():
-    return joblib.load(MODELS / "best_regression_pipeline.joblib")
+    return joblib.load(MODEL_PATH)
 
 
-def show_figure(filename: str, caption: str) -> None:
-    path = FIGURES / filename
-    if available(path):
-        st.image(str(path), caption=caption, use_container_width=True)
-    else:
-        st.info(f"Run the notebook to create {filename}.")
+@st.cache_data
+def load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
-def item_slider(statement: str, key: str) -> int:
-    return st.slider(label(statement), 1, 5, 3, key=key)
+def likert_question(question: str, key: str) -> int:
+    """Show one Likert item and return its 1--5 numeric coding."""
+    answer = st.radio(
+        question,
+        options=list(RESPONSE_OPTIONS),
+        index=2,
+        horizontal=True,
+        key=key,
+    )
+    return RESPONSE_OPTIONS[answer]
 
 
-st.set_page_config(page_title="AI Dependency Study", page_icon="📊", layout="wide")
-st.title("AI Dependency and Cognitive Offloading Among University Students")
-st.caption("Exploratory portfolio dashboard based on self-reported survey responses")
+def item_block(title: str, caption: str, items: list[str], key_prefix: str) -> list[int]:
+    st.markdown(f"#### {title}")
+    st.caption(caption)
+    return [likert_question(item, f"{key_prefix}_{number}") for number, item in enumerate(items)]
 
-summary_path = OUT / "results_summary.json"
-metadata_path = MODELS / "model_metadata.json"
-model_path = MODELS / "best_regression_pipeline.joblib"
-if not available(summary_path) or not available(metadata_path):
-    st.error("Analysis artifacts are missing. Run all cells in AI_Dependency_Study_anaconda_compatible.ipynb first.")
+
+def mean(values: list[int]) -> float:
+    return sum(values) / len(values)
+
+
+st.set_page_config(page_title="AI Dependency Index Demo", page_icon="📊", layout="wide")
+
+if not MODEL_PATH.is_file() or not METADATA_PATH.is_file() or not RESULTS.is_file():
+    st.error(
+        "Model artifacts are missing. Run all cells in "
+        "AI_Dependency_Study_anaconda_compatible.ipynb before opening this demo."
+    )
     st.stop()
 
-summary = load_json(str(summary_path))
-metadata = load_json(str(metadata_path))
-st.warning(
-    "This dashboard is exploratory. It does not diagnose AI dependency, cognitive impairment, "
-    "mental-health conditions, intelligence, memory, or cognitive ability."
+metadata = load_json(METADATA_PATH)
+summary = load_json(RESULTS)
+
+st.markdown(
+    """
+    <style>
+      .hero {
+        padding: 1.6rem 2rem;
+        border-radius: 1rem;
+        color: white;
+        background: linear-gradient(110deg, #3867d6, #7c3fb7);
+        margin-bottom: 1.4rem;
+      }
+      .hero h1 { color: white; margin: 0 0 .35rem 0; font-size: 2rem; }
+      .hero p { margin: 0; font-size: 1rem; opacity: .95; }
+      div[data-testid="stMetric"] {
+        background: #f5f8ff;
+        border: 1px solid #dce7ff;
+        border-radius: .7rem;
+        padding: .8rem;
+      }
+      div[data-testid="stFormSubmitButton"] > button {
+        width: 100%; background: #3867d6; color: white; border: 0; font-weight: 600;
+      }
+    </style>
+    <div class="hero">
+      <h1>📊 AI Dependency Index Demo</h1>
+      <p>Answer the self-report questions to receive an exploratory model estimate on the 1–5 survey scale.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
-page = st.sidebar.radio("Navigate", ["Overview", "Study findings", "Exploratory estimate", "Methods and limits"])
 
-if page == "Overview":
-    st.subheader("Study snapshot")
-    columns = st.columns(4)
-    columns[0].metric("Raw survey rows", f"{summary['n_raw']:,}")
-    columns[1].metric("Primary response patterns", f"{summary['n_primary']:,}")
-    columns[2].metric("Selected model", summary["best_model"])
-    columns[3].metric("Held-out R²", f"{summary['test_metrics']['R2']:.3f}")
-    st.write(
-        "The primary analysis gives each exact response pattern equal weight because 451 rows repeat complete "
-        "response patterns. This does not prove that the records came from repeated respondents."
-    )
-    first, second = st.columns(2)
-    with first:
-        show_figure("03_spearman_heatmap.png", "Spearman correlations among exploratory item averages")
-    with second:
-        show_figure("08_model_comparison.png", "Cross-validation and held-out regression performance")
+with st.sidebar:
+    st.header("Model information")
+    st.success("Exploratory portfolio model")
+    st.caption("Selected model")
+    st.write(f"**{summary['best_model']}**")
+    st.caption("Held-out test performance")
+    st.write(f"RMSE: **{summary['test_metrics']['RMSE']:.3f}**")
+    st.write(f"R²: **{summary['test_metrics']['R2']:.3f}**")
+    st.divider()
+    st.caption("Response scale")
+    st.write("1 = Strongly Disagree\n\n5 = Strongly Agree")
+    st.divider()
+    st.caption("Privacy")
+    st.write("Your answers are used only in this browser session and are not saved by this app.")
 
-elif page == "Study findings":
-    st.subheader("Association and model results")
-    relationships = load_table("spearman_relationships.csv")
-    st.dataframe(relationships.query("sample == 'primary_distinct'"), use_container_width=True, hide_index=True)
-    first, second = st.columns(2)
-    with first:
-        show_figure("11_permutation_importance.png", "Held-out permutation importance for the selected model")
-    with second:
-        show_figure("16_cluster_profiles.png", "Exploratory cluster centroids on the original 1–5 scale")
-    st.subheader("Supplementary enhancement checks")
-    first, second = st.columns(2)
-    with first:
-        st.caption("Training-only hyperparameter search; no test-set reuse")
-        st.dataframe(load_table("training_only_hyperparameter_search.csv"), use_container_width=True, hide_index=True)
-    with second:
-        st.caption("Alternative clustering comparison")
-        st.dataframe(load_table("alternative_clustering_comparison.csv"), use_container_width=True, hide_index=True)
-    show_figure("18_alternative_clustering.png", "Internal clustering criteria across methods")
+st.info(
+    "This is an exploratory educational demonstration. The result is not a psychological or clinical diagnosis, "
+    "a measure of intelligence or cognitive ability, or a basis for decisions about a person."
+)
 
-elif page == "Exploratory estimate":
-    st.subheader("Estimate the model output")
-    st.write(
-        "Use the survey coding: 1 = Strongly Disagree, 2 = Disagree, 3 = Neutral, 4 = Agree, and 5 = Strongly Agree. "
-        "No form values are written to disk."
-    )
-    st.info(
-        "The output is an exploratory prediction from the saved Model B pipeline. It is not a validated score, "
-        "diagnosis, eligibility decision, or student ranking."
-    )
-    if not available(model_path):
-        st.error("The saved model is missing. Run the notebook first.")
-        st.stop()
+form_column, result_column = st.columns([1.65, 1], gap="large")
 
-    with st.form("prediction_form"):
-        demographics, usage = st.columns(2)
-        with demographics:
-            gender = st.selectbox("Gender", ["Female", "Male"])
-            age = st.number_input("Age", min_value=18, max_value=28, value=22, step=1)
-            university_type = st.selectbox("University Type", ["Private University", "Public University", "Other"])
-            academic_level = st.selectbox("Academic Level", ["Undergraduate", "Postgraduate"])
-            department = st.selectbox("Department/Discipline", DEPARTMENTS)
-        with usage:
-            st.markdown("**AI usage items**")
-            usage_values = [item_slider(item, f"usage_{number}") for number, item in enumerate(USAGE_ITEMS)]
+with form_column:
+    st.subheader("Complete the questionnaire")
+    st.caption("Select the answer that best reflects your current academic use of generative AI tools.")
 
-        trust, offloading, decisions = st.columns(3)
-        with trust:
-            st.markdown("**Trust in AI items**")
-            trust_values = [item_slider(item, f"trust_{number}") for number, item in enumerate(TRUST_ITEMS)]
-        with offloading:
-            st.markdown("**Cognitive-offloading items**")
-            offloading_values = [item_slider(item, f"offloading_{number}") for number, item in enumerate(OFFLOADING_ITEMS)]
-        with decisions:
-            st.markdown("**Academic-decision items**")
-            decision_values = [item_slider(item, f"decision_{number}") for number, item in enumerate(DECISION_ITEMS)]
-        submitted = st.form_submit_button("Generate exploratory estimate")
+    with st.form("prediction_questionnaire", border=False):
+        with st.expander("About you", expanded=True):
+            demographic_left, demographic_right = st.columns(2)
+            with demographic_left:
+                gender = st.selectbox("Gender", ["Female", "Male"])
+                age = st.number_input("Age", min_value=18, max_value=28, value=22, step=1)
+                university_type = st.selectbox(
+                    "University Type", ["Private University", "Public University", "Other"]
+                )
+            with demographic_right:
+                academic_level = st.selectbox("Academic Level", ["Undergraduate", "Postgraduate"])
+                department = st.selectbox("Department/Discipline", DEPARTMENTS)
+
+        usage_values = item_block(
+            "1. Academic AI use", "Tell us how you use generative AI for your academic work.", USAGE_ITEMS, "usage"
+        )
+        trust_values = item_block(
+            "2. Trust in AI", "Tell us how much you trust AI in academic contexts.", TRUST_ITEMS, "trust"
+        )
+        offloading_values = item_block(
+            "3. Thinking while using AI", "Tell us about your learning and problem-solving experience.",
+            OFFLOADING_ITEMS, "offloading"
+        )
+        decision_values = item_block(
+            "4. Academic decisions", "Tell us how AI affects your study-related decisions.", DECISION_ITEMS, "decision"
+        )
+        submitted = st.form_submit_button("Generate my exploratory estimate", type="primary")
 
     if submitted:
         predictor_row = dict(zip(survey_columns("AI Usage", USAGE_ITEMS), usage_values))
-        predictor_row.update({
-            "Gender": gender,
-            "Age": int(age),
-            "University Type": university_type,
-            "Academic Level": academic_level,
-            "Department/Discipline": department,
-            "AI_Trust_Index": sum(trust_values) / len(trust_values),
-            "Cognitive_Offloading_Index": sum(offloading_values) / len(offloading_values),
-            "Academic_Decision_Index": sum(decision_values) / len(decision_values),
-        })
+        predictor_row.update(
+            {
+                "Gender": gender,
+                "Age": int(age),
+                "University Type": university_type,
+                "Academic Level": academic_level,
+                "Department/Discipline": department,
+                "AI_Trust_Index": mean(trust_values),
+                "Cognitive_Offloading_Index": mean(offloading_values),
+                "Academic_Decision_Index": mean(decision_values),
+            }
+        )
         feature_frame = pd.DataFrame([predictor_row]).reindex(columns=metadata["features"])
         prediction = float(load_model().predict(feature_frame)[0])
+        st.session_state["prediction"] = prediction
+        st.session_state["input_indices"] = {
+            "AI Usage": mean(usage_values),
+            "AI Trust": mean(trust_values),
+            "Cognitive Offloading": mean(offloading_values),
+            "Academic Decision-Making": mean(decision_values),
+        }
+
+with result_column:
+    st.subheader("Your prediction")
+    if "prediction" not in st.session_state:
+        st.info("Complete the questionnaire and select **Generate my exploratory estimate** to view the model result.")
+    else:
+        prediction = st.session_state["prediction"]
         st.success(f"Based on your responses, the model estimates an AI Dependency Index of {prediction:.1f}/5.")
-        st.metric("Exploratory predicted AI Dependency Index", f"{prediction:.2f} / 5")
-        st.bar_chart(pd.DataFrame({"Index value": [prediction]}, index=["Model estimate"]))
-        st.caption("The bar shows the estimated value on the survey's 1–5 response scale; it is not a severity category.")
+        st.metric("Estimated AI Dependency Index", f"{prediction:.2f} / 5")
+        st.progress(min(100, max(0, round(prediction / 5 * 100))), text=f"Estimated position on the 1–5 survey scale: {prediction:.2f}")
+        st.caption("This bar displays the model estimate on the survey response scale. It does not define severity levels.")
+        st.divider()
+        st.markdown("**Questionnaire averages used by the model**")
+        for name, value in st.session_state["input_indices"].items():
+            st.write(f"{name}: **{value:.2f}/5**")
+        st.divider()
         st.caption(
-            "The model excludes the five dependency items that construct the target. Its prediction can still use "
-            "related self-reported constructs and must not be used to make decisions about a person."
+            "The model predicts the dependency-item average without asking the five dependency questions that construct "
+            "that target. This avoids direct target leakage, but the estimate remains exploratory."
         )
 
-else:
-    st.subheader("Methods, privacy, and limitations")
+with st.expander("About this demo and its limits"):
     st.markdown(
         """
-        - The survey is cross-sectional and self-reported. Associations and feature importance do not establish causation.
-        - Primary internal-consistency estimates were weak, so the composite averages are exploratory rather than validated scales.
-        - The selected model has held-out RMSE of about 0.504 and R² of about 0.292. It is not externally validated.
-        - The dashboard loads aggregate outputs and a saved model. It does not display respondent-level records or save form submissions.
-        - Before public deployment, review survey permissions, privacy, security, model governance, and external validation.
+        This application uses the saved Gradient Boosting regression pipeline from the accompanying portfolio study.
+        It uses AI-use responses, demographics, and averages from the trust, cognitive-offloading, and academic-decision
+        questions. It does not collect or save individual answers.
+
+        The source survey is cross-sectional and self-reported. The dependency composite had weak internal consistency
+        in the primary analysis, and the model has not been externally validated. Therefore, the result should be read
+        only as an illustrative model estimate, not as evidence of a condition or a fact about an individual.
         """
     )
-    st.subheader("Run locally")
-    st.code("python -m pip install -r requirements.txt\npython -m streamlit run app.py", language="powershell")
