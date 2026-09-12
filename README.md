@@ -55,6 +55,17 @@ Use the `python -m streamlit` form because it works even when Streamlit's Script
 folder is not on PowerShell's PATH. The dashboard does not save form entries and
 labels any estimate as exploratory rather than diagnostic.
 
+When the form is submitted, it displays: “Based on your responses, the model
+estimates an AI Dependency Index of 3.8/5.” The value will vary with the entered
+responses and is an exploratory model output, not a psychological assessment.
+
+### Held-out model validation plot
+
+This plot compares the model's predictions with actual values in the held-out
+test patterns. It does not represent dashboard users or a clinical assessment.
+
+![Actual versus predicted AI Dependency Index on the held-out test set](outputs/figures/09_actual_vs_predicted.png)
+
 The notebook detects older SciPy seed arguments, OneHotEncoder parameter names,
 GroupKFold shuffle support, and SHAP plotting arguments. On older scikit-learn,
 the all-row sensitivity expands the seeded primary training folds by response

@@ -204,7 +204,10 @@ elif page == "Exploratory estimate":
         })
         feature_frame = pd.DataFrame([predictor_row]).reindex(columns=metadata["features"])
         prediction = float(load_model().predict(feature_frame)[0])
-        st.metric("Estimated AI Dependency Index", f"{prediction:.2f} / 5")
+        st.success(f"Based on your responses, the model estimates an AI Dependency Index of {prediction:.1f}/5.")
+        st.metric("Exploratory predicted AI Dependency Index", f"{prediction:.2f} / 5")
+        st.bar_chart(pd.DataFrame({"Index value": [prediction]}, index=["Model estimate"]))
+        st.caption("The bar shows the estimated value on the survey's 1–5 response scale; it is not a severity category.")
         st.caption(
             "The model excludes the five dependency items that construct the target. Its prediction can still use "
             "related self-reported constructs and must not be used to make decisions about a person."
