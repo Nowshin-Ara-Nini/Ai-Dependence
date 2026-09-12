@@ -1,1 +1,1 @@
-SHAP unavailable/incompatible: ModuleNotFoundError: No module named 'shap'. Valid permutation importance is the alternative.
+SHAP 0.52.0 executed on 250 held-out patterns; additivity verified.

@@ -5,21 +5,21 @@
   "best_feature_set": "B",
   "best_model": "Gradient Boosting",
   "test_metrics": {
-    "MAE": 0.3839473552195343,
+    "MAE": 0.38394735521953427,
     "RMSE": 0.5036365646700337,
     "R2": 0.2922930931815807
   },
   "best_model_a": "Random Forest",
   "cluster_k": 3,
-  "silhouette": 0.21958289108842755,
-  "shap_status": "SHAP unavailable/incompatible: ModuleNotFoundError: No module named 'shap'. Valid permutation importance is the alternative.",
+  "silhouette": 0.2233566538286602,
+  "shap_status": "SHAP 0.52.0 executed on 250 held-out patterns; additivity verified.",
   "research_answers": {
     "RQ1": "Evidence of an association after Holm adjustment: Spearman rho=0.140 (positive), raw p=6.66e-11, Holm-adjusted p=1.332e-10, n=2,162. This is a cross-sectional association, not causation.",
     "RQ2": "Evidence of an association after Holm adjustment: Spearman rho=0.284 (positive), raw p=1.559e-41, Holm-adjusted p=7.797e-41, n=2,162. This is a cross-sectional association, not causation.",
     "RQ3": "Evidence of an association after Holm adjustment: Spearman rho=0.269 (positive), raw p=3.958e-37, Holm-adjusted p=1.583e-36, n=2,162. This is a cross-sectional association, not causation.",
     "RQ4": "Evidence of an association after Holm adjustment: Spearman rho=0.067 (positive), raw p=0.001875, Holm-adjusted p=0.001875, n=2,162. This is a cross-sectional association, not causation.",
     "RQ5": "The selected Model A improves on the dummy in both CV and held-out RMSE. A/Random Forest has CV RMSE=0.505; test MAE=0.403, RMSE=0.534, R\u00b2=0.204. The dummy test RMSE is 0.599; absolute RMSE improvement is 0.065 index units. Prediction refers to a weakly reliable item average in this sample; external usefulness is unestablished.",
-    "RQ6": "In the CV-selected B/Gradient Boosting model, the largest positive held-out permutation effects are: Cognitive offloading (RMSE increase 0.0587 \u00b1 repeat SD 0.0078); AI trust (RMSE increase 0.0428 \u00b1 repeat SD 0.0060); Age (RMSE increase 0.0041 \u00b1 repeat SD 0.0021); use AI tools for assignment writing. (RMSE increase 0.0022 \u00b1 repeat SD 0.0009); Department/Discipline (RMSE increase 0.0020 \u00b1 repeat SD 0.0016). Rankings are model-specific, affected by correlated inputs, and do not identify causes.",
-    "RQ7": "Among k=2\u20136, k=3 has the largest silhouette (0.220). PCA retains 60.8% of standardized variance in two dimensions. Mean subsample adjusted-Rand agreement is 0.838. The fitted profiles summarize these response patterns; the silhouette, centroid differences, weak scale reliability and lack of external validation do not establish naturally distinct student populations."
+    "RQ6": "In the CV-selected B/Gradient Boosting model, the largest positive held-out permutation effects are: Cognitive offloading (RMSE increase 0.0589 \u00b1 repeat SD 0.0079); AI trust (RMSE increase 0.0420 \u00b1 repeat SD 0.0060); Age (RMSE increase 0.0041 \u00b1 repeat SD 0.0021); use AI tools for assignment writing. (RMSE increase 0.0022 \u00b1 repeat SD 0.0009); Department/Discipline (RMSE increase 0.0020 \u00b1 repeat SD 0.0016). Rankings are model-specific, affected by correlated inputs, and do not identify causes.",
+    "RQ7": "Among k=2\u20136, k=3 has the largest silhouette (0.223). PCA retains 60.8% of standardized variance in two dimensions. Mean subsample adjusted-Rand agreement is 0.910. The fitted profiles summarize these response patterns; the silhouette, centroid differences, weak scale reliability and lack of external validation do not establish naturally distinct student populations."
   }
 }

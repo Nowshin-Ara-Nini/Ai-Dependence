@@ -6,8 +6,7 @@ origins are unknown, and no cognitive ability or clinical condition is measured.
 
 ## Start here
 
-- [Executed notebook](AI_Dependency_Study.ipynb): sequential objectives, executable code, actual outputs, and interpretation.
-- [Notebook source for GitHub](AI_Dependency_Study_public.ipynb): the same complete code with respondent-level outputs cleared.
+- [Anaconda-compatible notebook](AI_Dependency_Study_anaconda_compatible.ipynb): sequential objectives, executable code, actual outputs, and interpretation.
 - [Final research report](FINAL_REPORT.md): methods, results, seven research answers, and limitations.
 - [HTML report and figure gallery](FINAL_REPORT.html): open locally in a browser; keep the outputs/figures folder beside it.
 - [Model comparison](outputs/tables/model_comparison.csv).
@@ -19,8 +18,8 @@ origins are unknown, and no cognitive ability or clinical condition is measured.
 - Primary analysis: 2,162 distinct complete response patterns; 451 repetitions beyond first copies.
 - CV-selected model: B / Gradient Boosting.
 - Held-out MAE 0.3839; RMSE 0.5036; R² 0.2923.
-- Selected K-Means k=3, silhouette=0.2196; partitions do not establish natural student categories.
-- SHAP unavailable/incompatible: ModuleNotFoundError: No module named 'shap'. Valid permutation importance is the alternative.
+- Selected K-Means k=3, silhouette=0.2234; partitions do not establish natural student categories.
+- SHAP 0.52.0 executed on 250 held-out patterns; additivity verified.
 
 ## Reproduce
 
@@ -43,13 +42,26 @@ and the already-executed permutation analysis is used. XGBoost is not required.
 The core notebook also runs sequentially in an IDE with the installed Python kernel.
 For a browser notebook interface, install JupyterLab separately if desired.
 
+## Local Streamlit dashboard
+
+After running all notebook cells, start the dashboard with:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+Use the `python -m streamlit` form because it works even when Streamlit's Scripts
+folder is not on PowerShell's PATH. The dashboard does not save form entries and
+labels any estimate as exploratory rather than diagnostic.
+
 The notebook detects older SciPy seed arguments, OneHotEncoder parameter names,
 GroupKFold shuffle support, and SHAP plotting arguments. On older scikit-learn,
 the all-row sensitivity expands the seeded primary training folds by response
 pattern, preserving group separation. Sensitivity estimates may differ with this
 fold layout; use the pinned versions for exact reproduction of the saved report.
 
-`build_project.py` imports the Phase 1 cell definitions, executes all code cells
+`build_project.py` recovers the Phase 1 cells from the saved full notebook, executes all code cells
 in a shared Python namespace, and writes their real stdout, warnings, errors
 and PNG figures into standard nbformat-4 JSON. This avoids an nbformat/nbclient
 dependency. On errors it saves a partial notebook with the traceback and stops.
@@ -59,14 +71,16 @@ Reruns overwrite generated results. Seeds are 42 where random state applies.
 
 | Path | Contents |
 | --- | --- |
-| `build_phase1_notebook.py` | Original schema/response audit; can rebuild Phase 1 only |
-| `build_project.py` | Complete notebook source and executable build |
+| `build_project.py` | Self-contained complete notebook source and executable build; it recovers the Phase 1 audit cells from the saved full notebook |
 | `outputs/phase1/` | Audit report, column checks, actual label frequencies |
 | `outputs/data/cleaned_survey_all_rows.csv` | All 2,613 records, 30 original columns, survey items encoded |
 | `outputs/data/composite_indices_all_rows.csv` | All records with the five requested indices and optional 0–100 rescaling |
 | `outputs/data/analysis_distinct_patterns.csv` | Primary distinct-pattern dataset |
 | `outputs/data/*_local.csv` | Split positions, error cases and cluster assignments; local use only |
 | `outputs/tables/` | Reliability, statistics, CV/test metrics, importance, cluster profiles and checks |
+| `outputs/tables/measurement_parallel_analysis.csv` | Exploratory item-level parallel-analysis screen |
+| `outputs/tables/training_only_hyperparameter_search.csv` | Training-CV tuning results; no test-set reuse |
+| `outputs/tables/alternative_clustering_comparison.csv` | K-Means, Ward, and Gaussian-mixture internal comparisons |
 | `outputs/figures/` | PNG and SVG plots |
 | `outputs/models/best_regression_pipeline.joblib` | CV-selected pipeline fitted only on primary training rows |
 | `outputs/models/best_model_a_pipeline.joblib` | Best training-CV usage/demographic predictor |
@@ -101,5 +115,6 @@ and review dataset permissions. No data license is invented. Only load joblib
 files you trust. Do not use this exploratory model to rank, diagnose or make
 decisions about individual students.
 
-Classification and Streamlit are optional and intentionally omitted. The HTML
-report provides a local results gallery. There are no validated severity cutoffs.
+Classification is intentionally omitted because there are no validated severity
+cutoffs. `app.py` provides a local Streamlit dashboard; the HTML report remains
+available as a static results gallery.

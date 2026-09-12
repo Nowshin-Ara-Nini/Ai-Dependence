@@ -1,31 +1,31 @@
 column,dtype,missing_count,unique_nonmissing_count
-Gender,object,0,2
+Gender,str,0,2
 Age,int64,0,11
-University Type,object,0,3
-Academic Level,object,0,2
-Department/Discipline,object,0,35
-AI Usage [I use generative AI tools regularly for academic purposes.],object,0,5
-AI Usage [I use AI tools for assignment writing.],object,0,5
-AI Usage [I use AI tools for study planning.],object,0,5
-AI Usage [I use AI tools for research-related tasks.],object,0,5
-AI Usage [I depend on AI tools to complete academic work faster.],object,0,5
-Cognitive Dependence [I feel uncomfortable completing academic tasks without AI tools.],object,0,5
-Cognitive Dependence [I rely on AI before thinking independently.],object,0,5
-Cognitive Dependence [AI tools have become essential to my academic workflow.],object,0,5
-Cognitive Dependence [I use AI tools even for simple academic decisions.],object,0,5
-Cognitive Dependence [I feel less confident working without AI assistance.],object,0,5
-Trust in AI [I trust AI-generated academic responses.],object,0,5
-Trust in AI [AI tools usually provide reliable information.],object,0,5
-Trust in AI [I rarely verify AI-generated answers before using them.],object,0,5
-Trust in AI [I believe AI tools make better academic suggestions than I can myself.],object,0,5
-Trust in AI [I trust AI recommendations for academic decision-making.],object,0,5
-Critical Thinking [Using AI tools reduces my need to think deeply.],object,0,5
-Critical Thinking [I analyze less when using AI-generated responses.],object,0,5
-Critical Thinking [I prefer AI explanations over conducting my own research.],object,0,5
-Critical Thinking [AI tools reduce my independent problem-solving efforts.],object,0,5
-Critical Thinking [I rely more on AI-generated ideas than my own thinking.],object,0,5
-Academic Decision-Making [AI tools influence my academic decisions.],object,0,5
-Academic Decision-Making [I use AI suggestions for study-related decisions.],object,0,5
-Academic Decision-Making [AI tools help me choose research topics or project ideas.],object,0,5
-Academic Decision-Making [I use AI recommendations to improve academic performance.],object,0,5
-Academic Decision-Making [AI tools positively affect my academic decision-making process.],object,0,5
+University Type,str,0,3
+Academic Level,str,0,2
+Department/Discipline,str,0,35
+AI Usage [I use generative AI tools regularly for academic purposes.],str,0,5
+AI Usage [I use AI tools for assignment writing.],str,0,5
+AI Usage [I use AI tools for study planning.],str,0,5
+AI Usage [I use AI tools for research-related tasks.],str,0,5
+AI Usage [I depend on AI tools to complete academic work faster.],str,0,5
+Cognitive Dependence [I feel uncomfortable completing academic tasks without AI tools.],str,0,5
+Cognitive Dependence [I rely on AI before thinking independently.],str,0,5
+Cognitive Dependence [AI tools have become essential to my academic workflow.],str,0,5
+Cognitive Dependence [I use AI tools even for simple academic decisions.],str,0,5
+Cognitive Dependence [I feel less confident working without AI assistance.],str,0,5
+Trust in AI [I trust AI-generated academic responses.],str,0,5
+Trust in AI [AI tools usually provide reliable information.],str,0,5
+Trust in AI [I rarely verify AI-generated answers before using them.],str,0,5
+Trust in AI [I believe AI tools make better academic suggestions than I can myself.],str,0,5
+Trust in AI [I trust AI recommendations for academic decision-making.],str,0,5
+Critical Thinking [Using AI tools reduces my need to think deeply.],str,0,5
+Critical Thinking [I analyze less when using AI-generated responses.],str,0,5
+Critical Thinking [I prefer AI explanations over conducting my own research.],str,0,5
+Critical Thinking [AI tools reduce my independent problem-solving efforts.],str,0,5
+Critical Thinking [I rely more on AI-generated ideas than my own thinking.],str,0,5
+Academic Decision-Making [AI tools influence my academic decisions.],str,0,5
+Academic Decision-Making [I use AI suggestions for study-related decisions.],str,0,5
+Academic Decision-Making [AI tools help me choose research topics or project ideas.],str,0,5
+Academic Decision-Making [I use AI recommendations to improve academic performance.],str,0,5
+Academic Decision-Making [AI tools positively affect my academic decision-making process.],str,0,5

@@ -2,8 +2,11 @@
 /*.csv
 /outputs/data/
 /outputs/models/
-/AI_Dependency_Study.ipynb
+/AI_Dependency_Study_anaconda_compatible.ipynb
 .venv/
 __pycache__/
 .ipynb_checkpoints/
 *.pyc
+/build_project.py
+/outputs/phase1
+/outputs/tables

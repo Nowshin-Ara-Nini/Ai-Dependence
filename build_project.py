@@ -2,7 +2,8 @@
 
 Run: python build_project.py
 Code is organized into sequential, readable notebook sections below.
-The Phase 1 builder supplies the original audit cells without running its main().
+The Anaconda-compatible notebook supplies the original Phase 1 audit cells and
+is the only notebook artifact written by this builder.
 """
 from contextlib import redirect_stdout, redirect_stderr
 from io import StringIO
@@ -13,15 +14,45 @@ import os
 import time
 import traceback
 
-from build_phase1_notebook import cells, markdown, code
-
 ROOT = Path(__file__).resolve().parent
-for cell in cells:
-    if cell["cell_type"] == "markdown":
-        cell["source"] = cell["source"].replace(
-            "This notebook deliberately stops after Phase 1.",
-            "This section completes Phase 1; the following sections extend the study.",
+NOTEBOOK_PATH = ROOT / "AI_Dependency_Study_anaconda_compatible.ipynb"
+
+
+def load_phase1_cells():
+    """Recover the Phase 1 source cells from the existing complete notebook."""
+    notebook_path = NOTEBOOK_PATH
+    if not notebook_path.is_file():
+        raise FileNotFoundError(
+            "AI_Dependency_Study_anaconda_compatible.ipynb is required to recover the Phase 1 cells. "
+            "Restore that notebook before rebuilding."
         )
+    saved_notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+    phase1 = []
+    for cell in saved_notebook["cells"]:
+        source = cell["source"]
+        if isinstance(source, list):
+            source = "".join(source)
+        if cell["cell_type"] == "markdown" and source.lstrip().startswith("# Phases 2"):
+            break
+        phase1.append({
+            "cell_type": cell["cell_type"], "metadata": {}, "source": source,
+            **({"execution_count": None, "outputs": []} if cell["cell_type"] == "code" else {}),
+        })
+    if len(phase1) != 11:
+        raise RuntimeError(f"Expected 11 Phase 1 cells; found {len(phase1)}.")
+    return phase1
+
+
+cells = load_phase1_cells()
+
+
+def markdown(source):
+    cells.append({"cell_type": "markdown", "metadata": {}, "source": source.strip() + "\n"})
+
+
+def code(source):
+    cells.append({"cell_type": "code", "metadata": {}, "execution_count": None,
+                  "outputs": [], "source": source.strip() + "\n"})
 
 markdown('''
 # Phases 2–20 — Exploratory analysis and explainable regression
@@ -486,13 +517,11 @@ pretest is unnecessary for this prespecified nonparametric strategy.
 ''')
 code('''
 def seeded_permutation_test(samples, statistic, alternative):
-    """Support both older SciPy random_state and newer SciPy rng APIs."""
-    import inspect
-    seed_argument = "rng" if "rng" in inspect.signature(stats.permutation_test).parameters else "random_state"
+    """Use the random_state API supported by the project's Anaconda environment."""
     return stats.permutation_test(
         samples, statistic, permutation_type="independent", vectorized=True,
         alternative=alternative, n_resamples=9999, batch=100,
-        **{seed_argument: np.random.default_rng(SEED)},
+        random_state=SEED,
     )
 
 def kruskal_statistic(*samples, axis=-1):
@@ -1126,6 +1155,167 @@ memberships, not diagnoses or supervised classification targets. Resampling
 agreement and silhouette address different questions; a stable partition can
 still describe overlapping rather than naturally distinct groups.
 
+## Supplementary enhancement analyses
+
+**Objective:** implement the feasible improvements using the current data while
+keeping the original primary analysis unchanged. These diagnostics remain
+exploratory because the item averages are weakly reliable and Likert responses
+are ordinal. They do not repair measurement validity, identify duplicate people,
+or provide external validation.
+
+1. **Measurement diagnostics:** display item-level Spearman correlations and
+run a seeded parallel-analysis screen followed by exploratory FactorAnalysis.
+The factor model treats coded responses as approximately continuous, so it is a
+screening tool; confirmatory work should use a new, validated instrument and an
+appropriate ordinal-factor model.
+2. **Training-only tuning:** use RandomizedSearchCV for Model A's Random Forest
+and Model B's Gradient Boosting pipeline. The fixed test set is deliberately
+excluded. These results therefore do not replace the preregistered-style primary
+comparison or provide a new final test score.
+3. **Alternative clustering:** compare Ward agglomerative clustering and Gaussian
+mixtures with K-Means using the same standardized five-index data. Silhouette
+quantifies separation; Gaussian-mixture BIC is an internal fit criterion. Neither
+method can validate naturally occurring student types.
+''')
+code('''
+from sklearn.decomposition import FactorAnalysis
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.mixture import GaussianMixture
+
+# 1. Item-level diagnostic correlations and approximate parallel analysis.
+measurement_rows = []
+loading_rows = []
+measurement_rng = np.random.default_rng(SEED)
+fig, axes = plt.subplots(1, len(constructs), figsize=(22, 4.5), layout="constrained")
+for ax, (index_name, item_columns) in zip(axes, constructs.items()):
+    item_frame = analysis_df[item_columns]
+    spearman_items = item_frame.corr(method="spearman")
+    observed_eigenvalues = np.linalg.eigvalsh(np.corrcoef(item_frame.to_numpy(dtype=float), rowvar=False))[::-1]
+    random_eigenvalues = []
+    for _ in range(200):
+        random_data = measurement_rng.normal(size=item_frame.shape)
+        random_eigenvalues.append(np.linalg.eigvalsh(np.corrcoef(random_data, rowvar=False))[::-1])
+    parallel_threshold = np.quantile(np.asarray(random_eigenvalues), 0.95, axis=0)
+    suggested_factors = max(1, int(np.sum(observed_eigenvalues > parallel_threshold)))
+    factor_input = StandardScaler().fit_transform(item_frame)
+    factor_model = FactorAnalysis(n_components=suggested_factors, random_state=SEED).fit(factor_input)
+    for factor_number, loading_vector in enumerate(factor_model.components_, start=1):
+        for item, loading in zip(item_columns, loading_vector):
+            loading_rows.append({"construct": index_name, "factor": factor_number,
+                                 "item": item, "loading": loading})
+    for number, (observed, threshold) in enumerate(zip(observed_eigenvalues, parallel_threshold), start=1):
+        measurement_rows.append({"construct": index_name, "component": number,
+                                 "observed_eigenvalue": observed,
+                                 "parallel_95th_percentile": threshold,
+                                 "retained_by_parallel_analysis": observed > threshold,
+                                 "suggested_factor_count": suggested_factors})
+    image = ax.imshow(spearman_items, cmap="RdBu_r", vmin=-1, vmax=1)
+    ax.set(title=short_names[index_name], xticks=range(5), yticks=range(5))
+    ax.set_xticklabels([f"I{i}" for i in range(1, 6)])
+    ax.set_yticklabels([f"I{i}" for i in range(1, 6)])
+    for row in range(5):
+        for column in range(5):
+            ax.text(column, row, f"{spearman_items.iloc[row, column]:.2f}", ha="center", va="center",
+                    color="white" if abs(spearman_items.iloc[row, column]) > 0.55 else "#172336", fontsize=8)
+fig.colorbar(image, ax=axes, label="Item-level Spearman rho", shrink=0.75)
+fig.suptitle("Exploratory item correlations | distinct response patterns", fontsize=15)
+save_figure(fig, "17_item_correlations")
+measurement_diagnostics = pd.DataFrame(measurement_rows)
+factor_loadings = pd.DataFrame(loading_rows)
+save_table(measurement_diagnostics, "measurement_parallel_analysis.csv")
+save_table(factor_loadings, "exploratory_factor_loadings.csv")
+print("Parallel-analysis screening results:")
+print(measurement_diagnostics.groupby("construct", observed=True)["suggested_factor_count"].first().to_string())
+print("Factor loadings are exploratory approximate-continuous results, not validated ordinal EFA.")
+
+# 2. Training-only model tuning. No held-out test prediction is calculated here.
+tuning_specs = {
+    "A_Random_Forest": {
+        "features": feature_sets["A"],
+        "estimator": RandomForestRegressor(random_state=SEED, n_jobs=1),
+        "parameters": {
+            "model__n_estimators": [120, 180, 240],
+            "model__max_depth": [None, 6, 12],
+            "model__min_samples_leaf": [2, 5, 10],
+            "model__max_features": [0.7, 1.0],
+        },
+    },
+    "B_Gradient_Boosting": {
+        "features": feature_sets["B"],
+        "estimator": GradientBoostingRegressor(random_state=SEED),
+        "parameters": {
+            "model__n_estimators": [100, 160, 220],
+            "model__learning_rate": [0.02, 0.05, 0.08],
+            "model__max_depth": [1, 2, 3],
+            "model__min_samples_leaf": [5, 8, 12],
+            "model__subsample": [0.8, 1.0],
+        },
+    },
+}
+tuning_rows = []
+tuned_models = {}
+with threadpool_limits(limits=2):
+    for label, specification in tuning_specs.items():
+        pipeline = Pipeline([("preprocessor", make_preprocessor(specification["features"])),
+                             ("model", specification["estimator"])])
+        search = RandomizedSearchCV(pipeline, specification["parameters"], n_iter=8,
+            scoring="neg_root_mean_squared_error", cv=cv_splits, random_state=SEED,
+            n_jobs=1, refit=True, return_train_score=False)
+        search.fit(analysis_df.loc[train_rows, specification["features"]], y_train)
+        tuned_models[label] = search.best_estimator_
+        tuning_rows.append({"search": label, "n_candidates": 8,
+            "best_training_CV_RMSE": -search.best_score_, "best_parameters": json.dumps(search.best_params_)})
+        joblib.dump(search.best_estimator_, MODELS / f"{label.lower()}_training_cv_tuned.joblib")
+tuning_results = pd.DataFrame(tuning_rows)
+save_table(tuning_results, "training_only_hyperparameter_search.csv")
+print("Training-only tuning results; the held-out test set was not used:")
+print(tuning_results.to_string(index=False))
+
+# 3. Alternative exploratory clustering methods on the same five standardized indices.
+alternative_cluster_rows = []
+with threadpool_limits(limits=2):
+    for method in ["KMeans", "Ward agglomerative", "Gaussian mixture"]:
+        for k in range(2, 7):
+            if method == "KMeans":
+                labels = cluster_candidates[k].labels_
+                bic = np.nan
+            elif method == "Ward agglomerative":
+                labels = AgglomerativeClustering(n_clusters=k, linkage="ward").fit_predict(cluster_x)
+                bic = np.nan
+            else:
+                mixture = GaussianMixture(n_components=k, covariance_type="full", n_init=10, random_state=SEED)
+                labels = mixture.fit_predict(cluster_x)
+                bic = mixture.bic(cluster_x)
+            alternative_cluster_rows.append({"method": method, "k": k,
+                "silhouette": silhouette_score(cluster_x, labels), "BIC": bic})
+alternative_clustering = pd.DataFrame(alternative_cluster_rows)
+save_table(alternative_clustering, "alternative_clustering_comparison.csv")
+fig, axes = plt.subplots(1, 2, figsize=(13, 5), layout="constrained")
+for method, subset in alternative_clustering.groupby("method", observed=True):
+    axes[0].plot(subset.k, subset.silhouette, "o-", label=method)
+mixture_subset = alternative_clustering.query("method == 'Gaussian mixture'")
+axes[0].set(title="Separation across methods", xlabel="Number of clusters", ylabel="Silhouette score", xticks=range(2, 7))
+axes[0].legend(frameon=False)
+axes[0].grid()
+axes[1].plot(mixture_subset.k, mixture_subset.BIC, "o-", color=COLORS[2])
+axes[1].set(title="Gaussian-mixture internal fit", xlabel="Number of components", ylabel="BIC (lower is preferred)", xticks=range(2, 7))
+axes[1].grid()
+save_figure(fig, "18_alternative_clustering")
+print("Alternative clustering comparison:")
+print(alternative_clustering.to_string(index=False, float_format=lambda value: f"{value:.4f}"))
+''')
+markdown('''
+**Output interpretation:** these additions are supplementary. Parallel analysis
+and FactorAnalysis do not establish a validated scale. The randomized searches
+report training-CV RMSE only, because the already-inspected test split is not
+reused for selecting a new “best” model. Alternative clustering can show whether
+separation is method-sensitive, but it cannot identify true student populations.
+
+Improvements requiring new information are not implemented: longitudinal design,
+behavioral measures, duplicate provenance, external validation, and deployment
+need data governance and/or independently collected data beyond this CSV.
+
 ## Phase 14 — Optional classification deliberately omitted
 
 **Objective:** retain continuous regression as the primary task. No validated
@@ -1275,6 +1465,16 @@ report_sections = [
     "The words lower/higher describe relative fitted profiles and do not define validated dependency categories. "
     "[scikit-learn silhouette analysis](https://scikit-learn.org/stable/auto_examples/cluster/plot_kmeans_silhouette_analysis).\\n\\n"
     + markdown_table(cluster_quality) + "\\n\\n" + markdown_table(cluster_profiles.reset_index()),
+    "## Supplementary enhancement analyses\\nMeasurement diagnostics use item-level Spearman correlations, "
+    "a 200-replicate parallel-analysis screen, and approximate-continuous FactorAnalysis. This does not replace "
+    "ordinal psychometric validation. Suggested factor counts are:\\n\\n"
+    + markdown_table(measurement_diagnostics.groupby("construct", observed=True)["suggested_factor_count"].first().reset_index())
+    + "\\n\\nTraining-only RandomizedSearchCV tuned the Model A Random Forest and Model B Gradient Boosting candidates. "
+    "The held-out test set was excluded, so these results are not compared or substituted for the primary test results.\\n\\n"
+    + markdown_table(tuning_results)
+    + "\\n\\nAlternative clustering uses the same standardized indices and reports internal criteria only. "
+    "No method validates naturally occurring student types.\\n\\n"
+    + markdown_table(alternative_clustering),
     "## Research questions\\n" + "\\n\\n".join(f"### {key}: {rq_questions[key]}\\n{answer}" for key, answer in rq_answers.items()),
     "## Conclusions supported by this dataset\\nThe four dependency-related research associations are "
     f"positive, with primary Spearman coefficients from {primary_correlations.iloc[:4].rho.min():.3f} "
@@ -1303,6 +1503,26 @@ report_sections = [
     "- K-Means always forms partitions; silhouette and descriptive stability do not validate distinct natural populations.\\n"
     "- No arbitrary supervised severity categories, diagnoses, impairment labels or causal recommendations are produced. "
     "Keep row-level exports, error cases, assignments and trained artifacts local until sharing rights are established.",
+    "## Future improvements\\n"
+    "1. **Strengthen measurement.** All five primary item averages have weak internal consistency (alpha 0.221–0.529). "
+    "Inspect item-level associations and conduct exploratory factor analysis in a future, appropriately designed measurement study "
+    "to assess whether the items reflect one dimension or several. Revise and validate the questionnaire before treating these averages as established constructs.\\n\\n"
+    "2. **Resolve repeated-response provenance.** The dataset contains 451 exact duplicate rows beyond their first occurrences. "
+    "Anonymous respondent identifiers or other privacy-preserving collection metadata would help distinguish repeat submissions "
+    "from independent students giving identical answers.\\n\\n"
+    "3. **Tune models using training data only.** GridSearchCV or RandomizedSearchCV could tune Random Forest and Gradient Boosting "
+    "hyperparameters inside cross-validation. A final test set must remain untouched until model selection is complete.\\n\\n"
+    f"4. **Study prediction error, especially at score extremes.** The selected Gradient Boosting model has held-out RMSE={best_result.Test_RMSE:.3f} "
+    f"and R²={best_result.Test_R2:.3f}; its predictions are concentrated toward the target's central range. Future work could test "
+    "pre-registered feature engineering, additional behavioral variables, alternative regressors, and larger independently collected samples.\\n\\n"
+    f"5. **Validate profile structure.** k={best_k} has the highest tested silhouette ({chosen_silhouette:.3f}), but the value indicates overlap. "
+    "Compare K-Means with hierarchical clustering and Gaussian mixture models, then test whether comparable profiles replicate in an independent sample.\\n\\n"
+    "6. **Collect longitudinal and behavioral evidence.** Multi-semester data and appropriate behavioral measures, such as logged AI-use frequency "
+    "or independent problem-solving tasks, could clarify temporal patterns. They would still require careful consent, privacy controls, and causal design.\\n\\n"
+    "7. **Externally validate the study.** Test the measurement structure and frozen model in independently collected samples from different universities, "
+    "disciplines, regions, and countries. The present sample's representativeness cannot be verified.\\n\\n"
+    "8. **Consider an interactive portfolio demonstration only after validation.** A FastAPI backend and React frontend could present an exploratory model estimate "
+    "and model explanation. It should minimise data collection, protect respondent privacy, and clearly state that the output is neither a diagnosis nor a validated assessment.",
     "## Reproducibility and deliverables\\nRun `python build_project.py` from the repository root. "
     "The script executes every notebook code cell in order, captures real outputs and figures, and stops on "
     "errors. It uses a standard-library notebook writer because nbformat/nbclient are unavailable locally. "
@@ -1401,8 +1621,8 @@ group, regression, error, explanation, and clustering visuals.
 and verify meaningful invariants: encoded values, exact target construction,
 train/test separation, saved-model prediction parity, and presence of the
 requested artifacts. No individual is labeled cognitively impaired or diagnosed.
-The optional Streamlit dashboard is omitted; the HTML report provides a local
-results viewer without presenting individual dependency predictions as validated.
+The Streamlit dashboard is a local portfolio viewer. Its exploratory estimate is
+clearly separated from the research findings and is not a validated assessment.
 ''')
 code('''
 assert len(clean_df) == len(df)
@@ -1421,9 +1641,13 @@ expected_assets = [DATA / "cleaned_survey_all_rows.csv", DATA / "composite_indic
                    TABLES / "model_comparison.csv", TABLES / "reliability.csv",
                    TABLES / "spearman_relationships.csv", TABLES / "group_tests.csv",
                    TABLES / "permutation_importance_best.csv", TABLES / "cluster_profiles.csv",
+                   TABLES / "measurement_parallel_analysis.csv", TABLES / "exploratory_factor_loadings.csv",
+                   TABLES / "training_only_hyperparameter_search.csv", TABLES / "alternative_clustering_comparison.csv",
                    MODELS / "best_regression_pipeline.joblib", Path("FINAL_REPORT.md"), Path("FINAL_REPORT.html")]
 assert all(path.is_file() and path.stat().st_size > 0 for path in expected_assets)
-requirements = "# Versions used for the executed notebook (Python 3.12).\\n" + "\\n".join(f"{name}=={version}" for name, version in versions.items()) + "\\n"
+requirements = ("# Versions used for the executed notebook (Python 3.12).\\n"
+                + "\\n".join(f"{name}=={version}" for name, version in versions.items())
+                + "\\n# Local portfolio dashboard.\\nstreamlit>=1.30,<2.0\\n")
 Path("requirements.txt").write_text(requirements, encoding="utf-8")
 optional_requirements = "# Optional SHAP; the project falls back to permutation importance.\\n"
 try:
@@ -1440,8 +1664,7 @@ origins are unknown, and no cognitive ability or clinical condition is measured.
 
 ## Start here
 
-- [Executed notebook](AI_Dependency_Study.ipynb): sequential objectives, executable code, actual outputs, and interpretation.
-- [Notebook source for GitHub](AI_Dependency_Study_public.ipynb): the same complete code with respondent-level outputs cleared.
+- [Anaconda-compatible notebook](AI_Dependency_Study_anaconda_compatible.ipynb): sequential objectives, executable code, actual outputs, and interpretation.
 - [Final research report](FINAL_REPORT.md): methods, results, seven research answers, and limitations.
 - [HTML report and figure gallery](FINAL_REPORT.html): open locally in a browser; keep the outputs/figures folder beside it.
 - [Model comparison](outputs/tables/model_comparison.csv).
@@ -1477,13 +1700,26 @@ and the already-executed permutation analysis is used. XGBoost is not required.
 The core notebook also runs sequentially in an IDE with the installed Python kernel.
 For a browser notebook interface, install JupyterLab separately if desired.
 
+## Local Streamlit dashboard
+
+After running all notebook cells, start the dashboard with:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
+```
+
+Use the `python -m streamlit` form because it works even when Streamlit's Scripts
+folder is not on PowerShell's PATH. The dashboard does not save form entries and
+labels any estimate as exploratory rather than diagnostic.
+
 The notebook detects older SciPy seed arguments, OneHotEncoder parameter names,
 GroupKFold shuffle support, and SHAP plotting arguments. On older scikit-learn,
 the all-row sensitivity expands the seeded primary training folds by response
 pattern, preserving group separation. Sensitivity estimates may differ with this
 fold layout; use the pinned versions for exact reproduction of the saved report.
 
-`build_project.py` imports the Phase 1 cell definitions, executes all code cells
+`build_project.py` recovers the Phase 1 cells from the saved full notebook, executes all code cells
 in a shared Python namespace, and writes their real stdout, warnings, errors
 and PNG figures into standard nbformat-4 JSON. This avoids an nbformat/nbclient
 dependency. On errors it saves a partial notebook with the traceback and stops.
@@ -1493,14 +1729,16 @@ Reruns overwrite generated results. Seeds are 42 where random state applies.
 
 | Path | Contents |
 | --- | --- |
-| `build_phase1_notebook.py` | Original schema/response audit; can rebuild Phase 1 only |
-| `build_project.py` | Complete notebook source and executable build |
+| `build_project.py` | Self-contained complete notebook source and executable build; it recovers the Phase 1 audit cells from the saved full notebook |
 | `outputs/phase1/` | Audit report, column checks, actual label frequencies |
 | `outputs/data/cleaned_survey_all_rows.csv` | All {len(df):,} records, 30 original columns, survey items encoded |
 | `outputs/data/composite_indices_all_rows.csv` | All records with the five requested indices and optional 0–100 rescaling |
 | `outputs/data/analysis_distinct_patterns.csv` | Primary distinct-pattern dataset |
 | `outputs/data/*_local.csv` | Split positions, error cases and cluster assignments; local use only |
 | `outputs/tables/` | Reliability, statistics, CV/test metrics, importance, cluster profiles and checks |
+| `outputs/tables/measurement_parallel_analysis.csv` | Exploratory item-level parallel-analysis screen |
+| `outputs/tables/training_only_hyperparameter_search.csv` | Training-CV tuning results; no test-set reuse |
+| `outputs/tables/alternative_clustering_comparison.csv` | K-Means, Ward, and Gaussian-mixture internal comparisons |
 | `outputs/figures/` | PNG and SVG plots |
 | `outputs/models/best_regression_pipeline.joblib` | CV-selected pipeline fitted only on primary training rows |
 | `outputs/models/best_model_a_pipeline.joblib` | Best training-CV usage/demographic predictor |
@@ -1535,8 +1773,9 @@ and review dataset permissions. No data license is invented. Only load joblib
 files you trust. Do not use this exploratory model to rank, diagnose or make
 decisions about individual students.
 
-Classification and Streamlit are optional and intentionally omitted. The HTML
-report provides a local results gallery. There are no validated severity cutoffs.
+Classification is intentionally omitted because there are no validated severity
+cutoffs. `app.py` provides a local Streamlit dashboard; the HTML report remains
+available as a static results gallery.
 """
 Path("README.md").write_text(readme, encoding="utf-8")
 verification = {"encoded_columns": 25, "primary_rows": len(analysis_df),
@@ -1564,14 +1803,7 @@ def write_notebook():
                      "language_info": {"name": "python", "version": "3.12"}},
         "nbformat": 4, "nbformat_minor": 5,
     }
-    (ROOT / "AI_Dependency_Study.ipynb").write_text(json.dumps(notebook, indent=1, ensure_ascii=False), encoding="utf-8")
-    public_notebook = json.loads(json.dumps(notebook))
-    for cell in public_notebook["cells"]:
-        if cell["cell_type"] == "code":
-            cell["outputs"] = []
-            cell["execution_count"] = None
-    (ROOT / "AI_Dependency_Study_public.ipynb").write_text(
-        json.dumps(public_notebook, indent=1, ensure_ascii=False), encoding="utf-8")
+    NOTEBOOK_PATH.write_text(json.dumps(notebook, indent=1, ensure_ascii=False), encoding="utf-8")
 
 
 def main():

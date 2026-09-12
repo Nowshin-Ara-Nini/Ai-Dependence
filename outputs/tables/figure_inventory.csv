@@ -15,3 +15,5 @@ figure,path
 14_silhouette_scores.png,outputs/figures/14_silhouette_scores.png
 15_pca_clusters.png,outputs/figures/15_pca_clusters.png
 16_cluster_profiles.png,outputs/figures/16_cluster_profiles.png
+17_item_correlations.png,outputs/figures/17_item_correlations.png
+18_alternative_clustering.png,outputs/figures/18_alternative_clustering.png
