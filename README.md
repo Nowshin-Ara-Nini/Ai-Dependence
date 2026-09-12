@@ -1,129 +1,188 @@
 # AI Dependency and Cognitive Offloading Among University Students
 
-An explainable machine-learning portfolio study using self-reported survey data.
-**This is exploratory:** primary Cronbach's alpha values are weak, duplicate
-origins are unknown, and no cognitive ability or clinical condition is measured.
+An explainable machine-learning portfolio project that examines self-reported academic use of generative AI, AI dependency, trust in AI, cognitive offloading, and AI-influenced academic decision-making among university students in Bangladesh.
 
-## Start here
+**Live demo:** [Open the Streamlit prediction app](https://ai-dependence-and-cognitive-offloading-lcpccta7q8vcncxa5epke8.streamlit.app/)
 
-- [Executed notebook](AI_Dependency_Study.ipynb): sequential objectives, executable code, actual outputs, and interpretation.
-- [Notebook source for GitHub](AI_Dependency_Study_public.ipynb): the same complete code with respondent-level outputs cleared.
-- [Final research report](FINAL_REPORT.md): methods, results, seven research answers, and limitations.
-- [HTML report and figure gallery](FINAL_REPORT.html): open locally in a browser; keep the outputs/figures folder beside it.
-- [Model comparison](outputs/tables/model_comparison.csv).
-- [Reliability and duplicate sensitivity](outputs/tables/reliability.csv).
+> The app returns an exploratory estimate of the AI Dependency Index from questionnaire responses. It is not a psychological or clinical assessment, a measure of intelligence or cognitive ability, or a basis for decisions about an individual.
 
-## Actual results
+## Project overview
 
-- Raw dataset: 2,613 rows, 30 columns; no missing responses.
-- Primary analysis: 2,162 distinct complete response patterns; 451 repetitions beyond first copies.
-- CV-selected model: B / Gradient Boosting.
-- Held-out MAE 0.3839; RMSE 0.5036; R² 0.2923.
-- Selected K-Means k=3, silhouette=0.2196; partitions do not establish natural student categories.
-- SHAP unavailable/incompatible: ModuleNotFoundError: No module named 'shap'. Valid permutation importance is the alternative.
+This study uses a cross-sectional self-report survey with **2,613 responses** and **30 columns**. It combines a transparent data audit, reliability analysis, Spearman correlations, non-parametric group comparisons, leakage-aware regression, permutation importance, and K-Means clustering.
 
-## Reproduce
+The central outcome is the **AI Dependency Index**, defined as the mean response to the five cognitive-dependence survey items on the original 1-5 Likert scale. Higher values indicate greater **self-reported cognitive dependence on AI**. The index is an exploratory survey composite; it does not measure intelligence, memory, or clinical impairment.
 
-Use Python 3.12 from the repository root. Place the original CSV there with the
-exact filename below. The data is not downloaded or fabricated by the project.
+## Live Streamlit demo
+
+The deployed application asks visitors for demographics and 20 questionnaire responses covering AI use, trust, cognitive offloading, and academic decision-making. It then uses the saved Gradient Boosting pipeline to return an estimated AI Dependency Index.
+
+**[Launch the interactive demo](https://ai-dependence-and-cognitive-offloading-lcpccta7q8vcncxa5epke8.streamlit.app/)**
+
+The five dependency items are deliberately excluded from the form because they construct the prediction target. This prevents direct target leakage.
+
+## Dataset and data-quality audit
+
+| Check | Result |
+| --- | ---: |
+| Raw responses | 2,613 |
+| Original columns | 30 |
+| Missing values | 0 |
+| Exact duplicate rows beyond the first copy | 451 |
+| Primary analysis sample | 2,162 distinct complete response patterns |
+| Survey response scale | Strongly Disagree to Strongly Agree, encoded 1-5 |
+
+The duplicate records could represent repeated submissions or different students giving identical full-response patterns. Because respondent identifiers were unavailable, the primary analysis gives each distinct complete pattern equal weight. Analyses using all rows are treated as sensitivity checks rather than proof about duplicate provenance.
+
+## Analytical workflow
+
+1. **Audit and cleaning** - validated the schema, response labels, missingness, duplicates, demographics, and all 25 Likert items before encoding.
+2. **Constructs and reliability** - identified five item groups programmatically and calculated Cronbach's alpha before creating exploratory item-average indices.
+3. **Exploratory analysis** - summarized demographics and index distributions; assessed monotonic associations with Spearman correlation and Holm-adjusted p-values.
+4. **Group comparisons** - compared dependency and cognitive-offloading indices across gender, university type, and academic level using assumption-aware non-parametric tests.
+5. **Regression** - predicted the continuous AI Dependency Index with an 80/20 held-out split and five-fold cross-validation on training data only.
+6. **Explainability** - used held-out permutation importance for the selected model.
+7. **Clustering** - standardized the five index variables, compared K-Means solutions for k=2 to k=6, and visualized the selected solution with PCA.
+
+### Leakage controls
+
+The five Cognitive Dependence items create the target and are never used as model predictors.
+
+- **Model A:** five AI-use items plus gender, age, university type, academic level, and department/discipline.
+- **Model B:** Model A plus AI Trust, Cognitive Offloading, and Academic Decision-Making indices.
+
+Model B is an associational prediction model. Its related survey constructs must not be interpreted as causes or as an early-warning system. Preprocessing is fitted inside a scikit-learn `Pipeline` and `ColumnTransformer` on training folds only.
+
+## Key results
+
+### Reliability evidence
+
+The primary distinct-pattern analysis found weak internal consistency for several exploratory composites. Alpha is evidence about internal consistency in this sample; it does not establish construct validity.
+
+| Exploratory index | Items | Cronbach's alpha |
+| --- | ---: | ---: |
+| AI Usage | 5 | 0.333 |
+| AI Dependency | 5 | 0.323 |
+| AI Trust | 5 | 0.284 |
+| Cognitive Offloading | 5 | 0.529 |
+| Academic Decision-Making | 5 | 0.221 |
+
+These results are a key limitation. The composites and all downstream model outputs should be read as exploratory rather than as validated psychometric scores.
+
+### Associations
+
+Primary correlations use Spearman's rho because the indices are derived from ordinal Likert responses. All p-values below are Holm-adjusted.
+
+| Relationship | Spearman rho | Holm-adjusted p-value | Interpretation |
+| --- | ---: | ---: | --- |
+| AI Usage and AI Dependency | 0.140 | 1.33e-10 | Positive monotonic association |
+| AI Dependency and Cognitive Offloading | 0.284 | 7.80e-41 | Positive monotonic association |
+| AI Trust and AI Dependency | 0.269 | 1.58e-36 | Positive monotonic association |
+| AI Dependency and Academic Decision-Making | 0.067 | 0.0019 | Small positive monotonic association |
+
+These cross-sectional associations do not establish causation.
+
+### Regression performance
+
+Models were selected by mean five-fold cross-validation RMSE on the training split, then evaluated once on the held-out test split.
+
+| Feature set | Best model | CV RMSE | Test MAE | Test RMSE | Test R<sup>2</sup> |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Model A: AI-use items + demographics | Random Forest | 0.505 | 0.403 | 0.534 | 0.204 |
+| Model B: Model A + related survey indices | Gradient Boosting | 0.497 | 0.384 | 0.504 | 0.292 |
+
+The selected **Gradient Boosting Model B** improves on the mean-prediction baseline, but its held-out R<sup>2</sup> shows that substantial variation remains unexplained. It is not externally validated.
+
+### Variables useful for prediction
+
+Held-out permutation importance ranked **Cognitive Offloading** (mean RMSE increase 0.0587) and **AI Trust** (0.0428) as the strongest inputs for the selected model. This ranking describes model reliance for prediction; correlated survey inputs and cross-sectional data mean it does not identify causal effects.
+
+### Student profiles
+
+Among K-Means solutions from k=2 to k=6, **k=3** had the highest silhouette score (**0.220**). The clusters summarize response patterns, including relatively lower, intermediate, and relatively higher dependency profiles. The modest silhouette score, weak scale reliability, and absence of external validation mean that these clusters should not be treated as naturally occurring student types.
+
+## Visual results
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <strong>Spearman correlation heatmap</strong><br>
+      <img src="outputs/figures/03_spearman_heatmap.png" alt="Spearman correlation heatmap for the five exploratory indices" width="100%">
+    </td>
+    <td width="50%" align="center">
+      <strong>Regression model comparison</strong><br>
+      <img src="outputs/figures/08_model_comparison.png" alt="Cross-validation and held-out regression model comparison" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <strong>Held-out actual versus predicted values</strong><br>
+      <img src="outputs/figures/09_actual_vs_predicted.png" alt="Actual versus predicted AI Dependency Index on held-out test data" width="100%">
+    </td>
+    <td width="50%" align="center">
+      <strong>Held-out permutation importance</strong><br>
+      <img src="outputs/figures/11_permutation_importance.png" alt="Permutation feature importance for the selected Gradient Boosting model" width="100%">
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <strong>K-Means profiles in PCA space</strong><br>
+      <img src="outputs/figures/15_pca_clusters.png" alt="PCA visualization of K-Means cluster assignments" width="100%">
+    </td>
+    <td width="50%" align="center">
+      <strong>Cluster profiles on the original scale</strong><br>
+      <img src="outputs/figures/16_cluster_profiles.png" alt="Cluster profile comparison on the original 1 to 5 scale" width="100%">
+    </td>
+  </tr>
+</table>
+
+More figures are available in [`outputs/figures/`](outputs/figures/), including demographic distributions, index distributions, group comparisons, residual diagnostics, the elbow curve, and silhouette scores.
+
+## Project structure
 
 ```text
-_(AI_Cognitive_Dependence_Survey_Data_BD_StudentsResponses) - Sheet1.csv
+.
+├── app.py                                  # Streamlit questionnaire and prediction interface
+├── FINAL_REPORT.md                         # Detailed written research report
+├── FINAL_REPORT.html                       # Browser-friendly report and figure gallery
+├── requirements.txt                        # Reproducible Python dependencies
+├── outputs/
+│   ├── figures/                            # EDA, modelling, and clustering visualizations
+│   ├── models/
+│   │   ├── best_regression_pipeline.joblib # Saved selected prediction pipeline
+│   │   └── model_metadata.json             # Feature contract and model metadata
+│   ├── tables/                             # Statistical and modelling result tables
+│   └── results_summary.json                # Machine-readable project summary
+└── .streamlit/config.toml                  # Streamlit theme configuration
 ```
+
+## Reproduce the analysis
+
+The original CSV is intentionally not included in the public repository. It contains row-level survey data and must be shared only with appropriate permission. The executed analysis notebook is kept locally for the same reason.
+
+To run the deployed application from a clone, install the pinned dependencies and start Streamlit with Python 3.11:
 
 ```powershell
-python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python build_project.py
+python -m pip install -r requirements.txt
+python -m streamlit run app.py
 ```
 
-SHAP is optional: install `requirements-optional.txt` to attempt tree SHAP.
-If SHAP cannot be imported or its additivity check fails, the exception is reported
-and the already-executed permutation analysis is used. XGBoost is not required.
-The core notebook also runs sequentially in an IDE with the installed Python kernel.
-For a browser notebook interface, install JupyterLab separately if desired.
+For Streamlit Community Cloud, select `app.py` as the entrypoint and choose **Python 3.11** in Advanced settings. The live deployment is available at the link above.
 
-## Deploy the prediction demo with Streamlit Community Cloud
+## Ethical use and limitations
 
-The deployed app is the interactive questionnaire in `app.py`: a visitor selects
-demographic details, answers 20 self-report questions, and receives an estimated
-AI Dependency Index on the 1–5 survey scale. The app does not save submissions.
+- All measures are self-reported and cross-sectional; the results are associative, not causal.
+- The AI Dependency Index is not a clinical diagnosis or a measure of intelligence, memory, or cognitive ability.
+- Weak primary reliability estimates limit measurement confidence and model interpretation.
+- Exact duplicate response patterns lacked respondent identifiers, so their origin is unknown.
+- The model is trained on this sample only and has not received external validation.
+- The Streamlit demo does not save questionnaire submissions and should not be used for ranking, diagnosis, admissions, discipline, or other high-impact decisions.
 
-Before deployment, commit only the two model artifacts needed for prediction;
-the raw CSV and row-level `outputs/data/` files remain excluded.
+## Reports and artifacts
 
-```powershell
-git add app.py README.md requirements.txt .gitignore .streamlit/config.toml `
-  outputs/models/best_regression_pipeline.joblib `
-  outputs/models/model_metadata.json outputs/results_summary.json
-git commit -m "Deploy Streamlit prediction demo"
-git push origin main
-```
-
-Then sign in at [Streamlit Community Cloud](https://share.streamlit.io/) with the
-GitHub account that administers this repository. Select
-`Nowshin-Ara-Nini/Ai-Dependence`, choose branch `main`, set `app.py` as the
-entrypoint, and choose **Python 3.11** in **Advanced settings**. Select
-**Deploy**. Later pushes to the selected branch automatically update the app.
-
-The notebook detects older SciPy seed arguments, OneHotEncoder parameter names,
-GroupKFold shuffle support, and SHAP plotting arguments. On older scikit-learn,
-the all-row sensitivity expands the seeded primary training folds by response
-pattern, preserving group separation. Sensitivity estimates may differ with this
-fold layout; use the pinned versions for exact reproduction of the saved report.
-
-`build_project.py` imports the Phase 1 cell definitions, executes all code cells
-in a shared Python namespace, and writes their real stdout, warnings, errors
-and PNG figures into standard nbformat-4 JSON. This avoids an nbformat/nbclient
-dependency. On errors it saves a partial notebook with the traceback and stops.
-Reruns overwrite generated results. Seeds are 42 where random state applies.
-
-## Artifact map
-
-| Path | Contents |
-| --- | --- |
-| `build_phase1_notebook.py` | Original schema/response audit; can rebuild Phase 1 only |
-| `build_project.py` | Complete notebook source and executable build |
-| `outputs/phase1/` | Audit report, column checks, actual label frequencies |
-| `outputs/data/cleaned_survey_all_rows.csv` | All 2,613 records, 30 original columns, survey items encoded |
-| `outputs/data/composite_indices_all_rows.csv` | All records with the five requested indices and optional 0–100 rescaling |
-| `outputs/data/analysis_distinct_patterns.csv` | Primary distinct-pattern dataset |
-| `outputs/data/*_local.csv` | Split positions, error cases and cluster assignments; local use only |
-| `outputs/tables/` | Reliability, statistics, CV/test metrics, importance, cluster profiles and checks |
-| `outputs/figures/` | PNG and SVG plots |
-| `outputs/models/best_regression_pipeline.joblib` | CV-selected pipeline fitted only on primary training rows |
-| `outputs/models/best_model_a_pipeline.joblib` | Best training-CV usage/demographic predictor |
-| `outputs/models/model_metadata.json` | Features, versions, mapping and limitations |
-| `outputs/models/clustering_bundle.joblib` | Descriptive scaler, K-Means, PCA and centroid-based names |
-| `outputs/results_summary.json` | Actual result summary and research answers |
-
-## Method and leakage controls
-
-The five dependence items construct the target and never enter predictors.
-Model A uses five usage items plus demographics; Model B adds the three related
-construct averages. A fixed 80/20 split and identical five-fold training CV
-compare Dummy, Linear, Ridge, Random Forest, and Gradient Boosting regression.
-Each estimator uses a training-fitted ColumnTransformer/Pipeline. Select by CV
-RMSE before test evaluation; no tuning follows inspection of test errors or importance.
-
-All exact copies of a full response pattern stay on one side of every split.
-The primary analysis gives each pattern equal weight. The all-row model sensitivity
-uses original multiplicities with pattern-grouped CV; these are different estimands.
-No claim is made that patterns identify people. No department synonyms are merged.
-The full analysis population is used for descriptive clustering only; clusters
-are never predictors or classes in the supervised task.
-
-## Privacy and sharing
-
-The source survey license, recruitment documentation and permission to publish
-responses were not supplied. `.gitignore` excludes raw CSVs, row-level exports,
-trained artifacts, and the executed notebook (which contains row previews/error
-positions). Aggregate tables/figures and code can be reviewed separately.
-Before sharing a notebook, clear its outputs or remove respondent-level outputs,
-and review dataset permissions. No data license is invented. Only load joblib
-files you trust. Do not use this exploratory model to rank, diagnose or make
-decisions about individual students.
-
-Classification is intentionally omitted because there are no validated severity
-cutoffs. `app.py` provides a separate exploratory Streamlit prediction demo;
-the HTML report remains a static results gallery.
+- [Final research report](FINAL_REPORT.md)
+- [HTML report](FINAL_REPORT.html)
+- [Model comparison table](outputs/tables/model_comparison.csv)
+- [Reliability table](outputs/tables/reliability.csv)
+- [Spearman association table](outputs/tables/spearman_relationships.csv)
+- [Permutation importance table](outputs/tables/permutation_importance_best.csv)
+- [Live Streamlit demo](https://ai-dependence-and-cognitive-offloading-lcpccta7q8vcncxa5epke8.streamlit.app/)
