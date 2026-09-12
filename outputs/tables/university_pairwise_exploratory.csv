@@ -1,0 +1,7 @@
+outcome,first,second,p_method,U,p_value,rank_biserial,p_holm
+AI_Dependency_Index,Other,Private University,9999 permutations,1201.5,0.1084,-0.46313672922252014,0.2168
+AI_Dependency_Index,Other,Public University,9999 permutations,908.0,0.0444,-0.563041385948027,0.1332
+AI_Dependency_Index,Private University,Public University,asymptotic,529978.5,0.0003534614400605463,-0.08831961026662571,0.0021207686403632775
+Cognitive_Offloading_Index,Other,Private University,9999 permutations,839.5,0.0242,-0.6248882931188562,0.0968
+Cognitive_Offloading_Index,Other,Public University,9999 permutations,674.5,0.0134,-0.6754090471607315,0.067
+Cognitive_Offloading_Index,Private University,Public University,asymptotic,564615.0,0.24580079491919926,-0.028737159621929687,0.24580079491919926

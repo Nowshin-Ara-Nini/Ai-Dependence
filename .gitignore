@@ -1,0 +1,9 @@
+# Raw survey and row-level derived records require an explicit sharing review.
+/*.csv
+/outputs/data/
+/outputs/models/
+/AI_Dependency_Study.ipynb
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+*.pyc

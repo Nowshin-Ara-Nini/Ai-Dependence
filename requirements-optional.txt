@@ -1,0 +1,2 @@
+# Optional SHAP; the project falls back to permutation importance.
+shap
