@@ -166,6 +166,20 @@ python -m pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
+The saved pipeline was trained with **scikit-learn 1.2.2**. Joblib model files
+are not guaranteed to load across scikit-learn versions. If the app reports a
+missing module such as `sklearn.ensemble._gb_losses`, repair the active Python
+environment and restart Streamlit:
+
+```powershell
+python -m pip install --upgrade --force-reinstall "scikit-learn==1.2.2"
+python -m streamlit run app.py
+```
+
+For the most reproducible local setup, create a clean Python 3.11 virtual
+environment and install the full pinned `requirements.txt` file before running
+the app.
+
 For Streamlit Community Cloud, select `app.py` as the entrypoint and choose **Python 3.11** in Advanced settings. The live deployment is available at the link above.
 
 ## Ethical use and limitations
@@ -177,6 +191,19 @@ For Streamlit Community Cloud, select `app.py` as the entrypoint and choose **Py
 - The model is trained on this sample only and has not received external validation.
 - The Streamlit demo does not save questionnaire submissions and should not be used for ranking, diagnosis, admissions, discipline, or other high-impact decisions.
 
+## Evidence status and deployment boundaries
+
+The released model card and evidence-status note distinguish results that were
+actually evaluated from diagnostics that have not yet been run. The project has
+one internal held-out evaluation and an all-rows duplicate-sensitivity analysis;
+it does **not** yet have external validation, continuous-score calibration
+results, or subgroup prediction-performance results. The demo must remain an
+exploratory educational tool and must not assign risk labels or support
+individual decisions.
+
+- [Model card](MODEL_CARD.md) — intended use, feature contract, performance, and limitations
+- [Evidence status and evaluation gaps](EVIDENCE_STATUS.md) — duplicate-sensitivity interpretation and a minimum next-evaluation plan
+
 ## Reports and artifacts
 
 - [Final research report](FINAL_REPORT.md)
@@ -185,4 +212,6 @@ For Streamlit Community Cloud, select `app.py` as the entrypoint and choose **Py
 - [Reliability table](outputs/tables/reliability.csv)
 - [Spearman association table](outputs/tables/spearman_relationships.csv)
 - [Permutation importance table](outputs/tables/permutation_importance_best.csv)
+- [Model card](MODEL_CARD.md)
+- [Evidence status and evaluation gaps](EVIDENCE_STATUS.md)
 - [Live Streamlit demo](https://ai-dependence-and-cognitive-offloading-lcpccta7q8vcncxa5epke8.streamlit.app/)

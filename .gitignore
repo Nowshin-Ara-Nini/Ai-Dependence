@@ -12,5 +12,5 @@ __pycache__/
 /build_project.py
 /outputs/phase1
 /outputs/tables
-/.devcontainer
-/.streamlit
+/*.devcontainer
+/*.streamlit

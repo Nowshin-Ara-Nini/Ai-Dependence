@@ -167,6 +167,10 @@ st.info(
     "This is an exploratory educational demonstration. The result is not a psychological or clinical diagnosis, "
     "a measure of intelligence or cognitive ability, or a basis for decisions about a person."
 )
+st.caption(
+    "The model has one internal test-set evaluation only. External validation, calibration analysis, and subgroup "
+    "prediction-performance checks have not yet been established; no risk category or action should be inferred."
+)
 
 form_column, result_column = st.columns([1.65, 1], gap="large")
 
