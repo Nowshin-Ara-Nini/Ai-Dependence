@@ -1,16 +1,12 @@
 # Raw survey and row-level derived records require an explicit sharing review.
 /*.csv
-/outputs/data/
-/outputs/models/*
-!/outputs/models/best_regression_pipeline.joblib
-!/outputs/models/model_metadata.json
+/outputs/tables/
 /AI_Dependency_Study_anaconda_compatible.ipynb
 .venv/
 __pycache__/
 .ipynb_checkpoints/
 *.pyc
 /build_project.py
-/outputs/phase1
-/outputs/tables
-/*.devcontainer
-/*.streamlit
+/.devcontainer/
+/.streamlit/
+/.venv/
